@@ -2,10 +2,12 @@
 
 An OrbStack Kubernetes demo for LAN-only ingress with split DNS and publicly trusted Let's Encrypt TLS through DNS-01 validation.
 
+This repository uses the reserved `example.com` domain as a placeholder. Complete [Use your own domain](#use-your-own-domain) before deploying.
+
 This project reproduces a LAN-only Kubernetes ingress with a publicly trusted Let's Encrypt certificate:
 
-- `https://frontend-1.demo.sezertetik.dev` serves `Hello, from FRONTEND-1`.
-- `https://frontend-2.demo.sezertetik.dev` serves `Hello, from FRONTEND-2`.
+- `https://frontend-1.demo.example.com` serves `Hello, from FRONTEND-1`.
+- `https://frontend-2.demo.example.com` serves `Hello, from FRONTEND-2`.
 - HTTP requests receive a `308 Permanent Redirect` to HTTPS.
 - No application port or public A/AAAA record is exposed to the internet.
 - Phones and other LAN devices trust the certificate without installing a private CA.
@@ -35,7 +37,7 @@ cert-manager
 
 Cloudflare is used only for domain validation. It does not proxy application traffic.
 
-Public Certificate Transparency logs permanently contain `*.demo.sezertetik.dev`. The temporary `_acme-challenge.demo.sezertetik.dev` TXT record is also publicly visible during issuance.
+Public Certificate Transparency logs permanently contain `*.demo.example.com`. The temporary `_acme-challenge.demo.example.com` TXT record is also publicly visible during issuance.
 
 ## What DNS-01 means
 
@@ -44,7 +46,7 @@ DNS-01 is an ACME domain-ownership challenge used by certificate authorities suc
 For this demo, the validation lifecycle is:
 
 1. Let's Encrypt gives cert-manager a unique challenge token.
-2. cert-manager uses the Cloudflare API to create a temporary TXT record at `_acme-challenge.demo.sezertetik.dev`.
+2. cert-manager uses the Cloudflare API to create a temporary TXT record at `_acme-challenge.demo.example.com`.
 3. Let's Encrypt queries public DNS and verifies the token.
 4. Let's Encrypt issues the wildcard certificate.
 5. cert-manager stores it in the `frontends-tls` Kubernetes Secret and deletes the TXT record.
@@ -53,11 +55,22 @@ The TXT record is needed only while proving domain ownership. Browsers subsequen
 
 DNS-01 is used instead of HTTP-01 because the application remains private. HTTP-01 would require Let's Encrypt to reach a challenge endpoint through public port 80. DNS-01 requires no public application address, supports wildcard certificates, and works with LAN-only services.
 
+## Use your own domain
+
+`example.com` is reserved for documentation and cannot be used for this deployment. Replace it locally with a Cloudflare-managed DNS zone you control before running the setup script:
+
+1. In `k8s/certificate.yaml`, replace `example.com` in `dnsZones` and `*.demo.example.com` in `dnsNames`.
+2. In `k8s/ingress.yaml`, replace the four `frontend-1.demo.example.com` and `frontend-2.demo.example.com` host values.
+3. Use the same hostnames in the private router DNS records and verification commands shown below.
+4. Scope the Cloudflare API token to the same DNS zone.
+
+Keep the `demo.` prefix or replace it consistently in both manifests and your private DNS records. Do not commit personalized domain values if you want to keep them out of a public fork.
+
 ## Prerequisites
 
 - macOS with OrbStack installed and Kubernetes enabled
 - `kubectl` configured with the `orbstack` context
-- The `sezertetik.dev` Cloudflare DNS zone
+- A Cloudflare-managed DNS zone, represented by `example.com` in this README
 - Permission to create a scoped Cloudflare API token
 - A router or local DNS server that supports private DNS records
 - A phone and Mac connected to the same non-isolated LAN
@@ -95,8 +108,8 @@ If the Mac uses Ethernet, obtain the address from the active Ethernet interface 
 Add these records to the router's private or local DNS configuration:
 
 ```text
-frontend-1.demo.sezertetik.dev -> 192.168.1.50
-frontend-2.demo.sezertetik.dev -> 192.168.1.50
+frontend-1.demo.example.com -> 192.168.1.50
+frontend-2.demo.example.com -> 192.168.1.50
 ```
 
 Replace `192.168.1.50` with the Mac's reserved LAN IP.
@@ -106,8 +119,8 @@ Do not create public Cloudflare A or AAAA records for these names. The phone mus
 Verify private DNS from the Mac:
 
 ```bash
-dig +short frontend-1.demo.sezertetik.dev
-dig +short frontend-2.demo.sezertetik.dev
+dig +short frontend-1.demo.example.com
+dig +short frontend-2.demo.example.com
 ```
 
 Both commands should return the Mac's LAN IP.
@@ -115,10 +128,10 @@ Both commands should return the Mac's LAN IP.
 Verify that no public address is published:
 
 ```bash
-dig +short @1.1.1.1 A frontend-1.demo.sezertetik.dev
-dig +short @1.1.1.1 AAAA frontend-1.demo.sezertetik.dev
-dig +short @1.1.1.1 A frontend-2.demo.sezertetik.dev
-dig +short @1.1.1.1 AAAA frontend-2.demo.sezertetik.dev
+dig +short @1.1.1.1 A frontend-1.demo.example.com
+dig +short @1.1.1.1 AAAA frontend-1.demo.example.com
+dig +short @1.1.1.1 A frontend-2.demo.example.com
+dig +short @1.1.1.1 AAAA frontend-2.demo.example.com
 ```
 
 These commands should produce no output.
@@ -133,7 +146,7 @@ Zone / DNS / Edit
 Zone / Zone / Read
 
 Zone Resources:
-Include / Specific zone / sezertetik.dev
+Include / Specific zone / example.com
 ```
 
 Do not use the Global API Key and do not put the token in this repository. The setup script reads it from a hidden prompt and stores it only in the local Kubernetes `cloudflare-api-token` Secret.
@@ -180,16 +193,16 @@ The Challenge resource normally disappears after successful issuance. Cloudflare
 From the Mac:
 
 ```bash
-curl -I http://frontend-1.demo.sezertetik.dev
-curl https://frontend-1.demo.sezertetik.dev
-curl https://frontend-2.demo.sezertetik.dev
+curl -I http://frontend-1.demo.example.com
+curl https://frontend-1.demo.example.com
+curl https://frontend-2.demo.example.com
 ```
 
 Expected results:
 
 ```text
 HTTP/1.1 308 Permanent Redirect
-Location: https://frontend-1.demo.sezertetik.dev
+Location: https://frontend-1.demo.example.com
 
 Hello, from FRONTEND-1
 Hello, from FRONTEND-2
@@ -197,8 +210,8 @@ Hello, from FRONTEND-2
 
 Open these addresses on a phone connected to the same LAN:
 
-- `https://frontend-1.demo.sezertetik.dev`
-- `https://frontend-2.demo.sezertetik.dev`
+- `https://frontend-1.demo.example.com`
+- `https://frontend-2.demo.example.com`
 
 The browser should trust HTTPS without installing a certificate profile.
 

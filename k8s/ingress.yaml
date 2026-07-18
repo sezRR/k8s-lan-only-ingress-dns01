@@ -9,11 +9,11 @@ spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - frontend-1.demo.sezertetik.dev
-        - frontend-2.demo.sezertetik.dev
+        - frontend-1.demo.example.com
+        - frontend-2.demo.example.com
       secretName: frontends-tls
   rules:
-    - host: frontend-1.demo.sezertetik.dev
+    - host: frontend-1.demo.example.com
       http:
         paths:
           - path: /
@@ -23,7 +23,7 @@ spec:
                 name: frontend-1
                 port:
                   name: http
-    - host: frontend-2.demo.sezertetik.dev
+    - host: frontend-2.demo.example.com
       http:
         paths:
           - path: /
