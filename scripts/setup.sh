@@ -110,4 +110,4 @@ INGRESS_IP="$(kubectl get service ingress-nginx-controller \
 
 echo
 echo "Deployment is ready. Ingress IP: ${INGRESS_IP:-not assigned yet}"
-echo "See README.md for the LAN-only DNS records required by your Mac and phone."
+echo "See README.md for the LAN-only DNS records required by devices on your network."
