@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: ingress-demo
+resources:
+  - k8s/namespace.yaml
+  - k8s/apps.yaml
+  - k8s/certificate.yaml
+  - k8s/ingress.yaml
+configMapGenerator:
+  - name: frontend-1-html
+    files:
+      - index.html=frontend-1/index.html
+  - name: frontend-2-html
+    files:
+      - index.html=frontend-2/index.html
