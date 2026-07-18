@@ -1,0 +1,14 @@
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Private keys and local secret manifests
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.secret.yaml
+secrets.local.yaml

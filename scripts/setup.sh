@@ -81,9 +81,10 @@ if [[ -z "${CLOUDFLARE_API_TOKEN:-}" ]] && ! kubectl get secret cloudflare-api-t
 fi
 
 if [[ -n "${CLOUDFLARE_API_TOKEN:-}" ]]; then
-  kubectl create secret generic cloudflare-api-token \
+  export -n CLOUDFLARE_API_TOKEN
+  printf '%s' "$CLOUDFLARE_API_TOKEN" | kubectl create secret generic cloudflare-api-token \
     --namespace ingress-demo \
-    --from-literal="api-token=$CLOUDFLARE_API_TOKEN" \
+    --from-file="api-token=/dev/stdin" \
     --dry-run=client \
     -o yaml | kubectl apply -f -
   unset CLOUDFLARE_API_TOKEN
