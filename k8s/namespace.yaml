@@ -2,3 +2,9 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: ingress-demo
+  labels:
+    app.kubernetes.io/managed-by: ingress-demo-setup
+    app.kubernetes.io/part-of: ingress-demo
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/warn: restricted

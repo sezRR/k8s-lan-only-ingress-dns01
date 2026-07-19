@@ -1,10 +1,15 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: ingress-demo
+labels:
+  - pairs:
+      app.kubernetes.io/managed-by: ingress-demo-setup
+      app.kubernetes.io/part-of: ingress-demo
 resources:
   - k8s/namespace.yaml
   - k8s/apps.yaml
   - k8s/certificate.yaml
+  - k8s/network-policy.yaml
 configMapGenerator:
   - name: frontend-1-html
     files:

@@ -2,6 +2,10 @@ apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
   name: frontends
+  labels:
+    app.kubernetes.io/component: ingress
+    app.kubernetes.io/managed-by: ingress-demo-setup
+    app.kubernetes.io/part-of: ingress-demo
 spec:
   entryPoints:
     - websecure

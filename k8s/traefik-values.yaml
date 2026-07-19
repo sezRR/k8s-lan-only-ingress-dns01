@@ -1,5 +1,11 @@
+image:
+  tag: v3.7.8
+  digest: sha256:4299bbed850421258fc5448c2e0e6ad350981d4d335a68de11b92448aedbefe5
+versionOverride: v3.7.8
+commonLabels:
+  app.kubernetes.io/part-of: ingress-demo
 api:
-  dashboard: true
+  dashboard: false
   disableDashboardAd: true
   insecure: false
 ingressClass:
@@ -28,6 +34,17 @@ providers:
     enabled: false
 rbac:
   namespaced: true
+resources:
+  requests:
+    cpu: 25m
+    memory: 32Mi
+  limits:
+    cpu: 250m
+    memory: 128Mi
 service:
   spec:
+    externalTrafficPolicy: Local
     type: LoadBalancer
+global:
+  checkNewVersion: false
+  sendAnonymousUsage: false

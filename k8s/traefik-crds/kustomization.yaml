@@ -1,13 +1,17 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
+labels:
+  - pairs:
+      app.kubernetes.io/managed-by: ingress-demo-setup
+      app.kubernetes.io/part-of: ingress-demo
 resources:
-  - https://raw.githubusercontent.com/traefik/traefik-helm-chart/v41.0.2/traefik/crds/traefik.io_ingressroutes.yaml
-  - https://raw.githubusercontent.com/traefik/traefik-helm-chart/v41.0.2/traefik/crds/traefik.io_ingressroutetcps.yaml
-  - https://raw.githubusercontent.com/traefik/traefik-helm-chart/v41.0.2/traefik/crds/traefik.io_ingressrouteudps.yaml
-  - https://raw.githubusercontent.com/traefik/traefik-helm-chart/v41.0.2/traefik/crds/traefik.io_middlewares.yaml
-  - https://raw.githubusercontent.com/traefik/traefik-helm-chart/v41.0.2/traefik/crds/traefik.io_middlewaretcps.yaml
-  - https://raw.githubusercontent.com/traefik/traefik-helm-chart/v41.0.2/traefik/crds/traefik.io_serverstransports.yaml
-  - https://raw.githubusercontent.com/traefik/traefik-helm-chart/v41.0.2/traefik/crds/traefik.io_serverstransporttcps.yaml
-  - https://raw.githubusercontent.com/traefik/traefik-helm-chart/v41.0.2/traefik/crds/traefik.io_tlsoptions.yaml
-  - https://raw.githubusercontent.com/traefik/traefik-helm-chart/v41.0.2/traefik/crds/traefik.io_tlsstores.yaml
-  - https://raw.githubusercontent.com/traefik/traefik-helm-chart/v41.0.2/traefik/crds/traefik.io_traefikservices.yaml
+  - https://raw.githubusercontent.com/traefik/traefik-helm-chart/2b1428f503bd86072ddc65c7fc1cbc65607a9e12/traefik/crds/traefik.io_ingressroutes.yaml
+  - https://raw.githubusercontent.com/traefik/traefik-helm-chart/2b1428f503bd86072ddc65c7fc1cbc65607a9e12/traefik/crds/traefik.io_ingressroutetcps.yaml
+  - https://raw.githubusercontent.com/traefik/traefik-helm-chart/2b1428f503bd86072ddc65c7fc1cbc65607a9e12/traefik/crds/traefik.io_ingressrouteudps.yaml
+  - https://raw.githubusercontent.com/traefik/traefik-helm-chart/2b1428f503bd86072ddc65c7fc1cbc65607a9e12/traefik/crds/traefik.io_middlewares.yaml
+  - https://raw.githubusercontent.com/traefik/traefik-helm-chart/2b1428f503bd86072ddc65c7fc1cbc65607a9e12/traefik/crds/traefik.io_middlewaretcps.yaml
+  - https://raw.githubusercontent.com/traefik/traefik-helm-chart/2b1428f503bd86072ddc65c7fc1cbc65607a9e12/traefik/crds/traefik.io_serverstransports.yaml
+  - https://raw.githubusercontent.com/traefik/traefik-helm-chart/2b1428f503bd86072ddc65c7fc1cbc65607a9e12/traefik/crds/traefik.io_serverstransporttcps.yaml
+  - https://raw.githubusercontent.com/traefik/traefik-helm-chart/2b1428f503bd86072ddc65c7fc1cbc65607a9e12/traefik/crds/traefik.io_tlsoptions.yaml
+  - https://raw.githubusercontent.com/traefik/traefik-helm-chart/2b1428f503bd86072ddc65c7fc1cbc65607a9e12/traefik/crds/traefik.io_tlsstores.yaml
+  - https://raw.githubusercontent.com/traefik/traefik-helm-chart/2b1428f503bd86072ddc65c7fc1cbc65607a9e12/traefik/crds/traefik.io_traefikservices.yaml

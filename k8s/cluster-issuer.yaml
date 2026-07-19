@@ -1,0 +1,21 @@
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: ingress-demo-letsencrypt-cloudflare
+  labels:
+    app.kubernetes.io/managed-by: ingress-demo-setup
+    app.kubernetes.io/part-of: ingress-demo
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    privateKeySecretRef:
+      name: ingress-demo-letsencrypt-cloudflare-account
+    solvers:
+      - selector:
+          dnsZones:
+            - example.com
+        dns01:
+          cloudflare:
+            apiTokenSecretRef:
+              name: ingress-demo-cloudflare-api-token
+              key: api-token

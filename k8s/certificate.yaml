@@ -1,31 +1,12 @@
 apiVersion: cert-manager.io/v1
-kind: Issuer
-metadata:
-  name: letsencrypt-cloudflare
-spec:
-  acme:
-    server: https://acme-v02.api.letsencrypt.org/directory
-    privateKeySecretRef:
-      name: letsencrypt-cloudflare-account
-    solvers:
-      - selector:
-          dnsZones:
-            - example.com
-        dns01:
-          cloudflare:
-            apiTokenSecretRef:
-              name: cloudflare-api-token
-              key: api-token
----
-apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: frontends
 spec:
   secretName: frontends-tls
   issuerRef:
-    name: letsencrypt-cloudflare
-    kind: Issuer
+    name: ingress-demo-letsencrypt-cloudflare
+    kind: ClusterIssuer
   privateKey:
     rotationPolicy: Always
   dnsNames:

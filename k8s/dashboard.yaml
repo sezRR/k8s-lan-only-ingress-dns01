@@ -2,6 +2,10 @@ apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
   name: traefik-dashboard-auth
+  labels:
+    app.kubernetes.io/component: dashboard
+    app.kubernetes.io/managed-by: ingress-demo-setup
+    app.kubernetes.io/part-of: ingress-demo
 spec:
   basicAuth:
     secret: traefik-dashboard-auth
@@ -9,7 +13,41 @@ spec:
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
+  name: traefik-dashboard-allow-private
+  labels:
+    app.kubernetes.io/component: dashboard
+    app.kubernetes.io/managed-by: ingress-demo-setup
+    app.kubernetes.io/part-of: ingress-demo
+spec:
+  ipAllowList:
+    sourceRange:
+      - 10.0.0.0/8
+      - 127.0.0.0/8
+      - 172.16.0.0/12
+      - 192.168.0.0/16
+      - fc00::/7
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: traefik-dashboard-rate-limit
+  labels:
+    app.kubernetes.io/component: dashboard
+    app.kubernetes.io/managed-by: ingress-demo-setup
+    app.kubernetes.io/part-of: ingress-demo
+spec:
+  rateLimit:
+    average: 10
+    burst: 20
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
   name: traefik-dashboard-redirect
+  labels:
+    app.kubernetes.io/component: dashboard
+    app.kubernetes.io/managed-by: ingress-demo-setup
+    app.kubernetes.io/part-of: ingress-demo
 spec:
   redirectRegex:
     regex: ^https://[^/]+/?$
@@ -20,6 +58,10 @@ apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
   name: traefik-dashboard
+  labels:
+    app.kubernetes.io/component: dashboard
+    app.kubernetes.io/managed-by: ingress-demo-setup
+    app.kubernetes.io/part-of: ingress-demo
 spec:
   entryPoints:
     - websecure
@@ -27,6 +69,8 @@ spec:
     - kind: Rule
       match: Host(`traefik.demo.example.com`) && Path(`/`)
       middlewares:
+        - name: traefik-dashboard-allow-private
+        - name: traefik-dashboard-rate-limit
         - name: traefik-dashboard-redirect
       services:
         - name: api@internal
@@ -34,6 +78,8 @@ spec:
     - kind: Rule
       match: Host(`traefik.demo.example.com`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))
       middlewares:
+        - name: traefik-dashboard-allow-private
+        - name: traefik-dashboard-rate-limit
         - name: traefik-dashboard-auth
       services:
         - name: api@internal

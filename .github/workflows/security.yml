@@ -1,0 +1,181 @@
+name: Security
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  schedule:
+    - cron: "23 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate manifests and shell
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Run ShellCheck
+        run: shellcheck scripts/*.sh
+
+      - name: Install kubeconform
+        env:
+          KUBECONFORM_SHA256: c31518ddd122663b3f3aa874cfe8178cb0988de944f29c74a0b9260920d115d3
+          KUBECONFORM_VERSION: 0.7.0
+        run: |
+          archive="$RUNNER_TEMP/kubeconform.tar.gz"
+          curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error \
+            "https://github.com/yannh/kubeconform/releases/download/v${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" \
+            --output "$archive"
+          printf '%s  %s\n' "$KUBECONFORM_SHA256" "$archive" | sha256sum --check --status
+          tar -xzf "$archive" -C "$RUNNER_TEMP" kubeconform
+          printf '%s\n' "$RUNNER_TEMP" >> "$GITHUB_PATH"
+
+      - name: Verify Traefik chart
+        env:
+          TRAEFIK_CHART_SHA256: 71685966a482dfa2c2b39fedf7ae9b1391251314f87f4d05faa84e4848b8d3c2
+          TRAEFIK_CHART_VERSION: 41.0.2
+        run: |
+          chart="$RUNNER_TEMP/traefik-${TRAEFIK_CHART_VERSION}.tgz"
+          curl --proto '=https' --tlsv1.2 --fail --location --silent --show-error \
+            "https://traefik.github.io/charts/traefik/traefik-${TRAEFIK_CHART_VERSION}.tgz" \
+            --output "$chart"
+          printf '%s  %s\n' "$TRAEFIK_CHART_SHA256" "$chart" | sha256sum --check --status
+          helm lint "$chart" --values k8s/traefik-values.yaml
+          helm template traefik "$chart" \
+            --namespace traefik \
+            --values k8s/traefik-values.yaml \
+            --set api.dashboard=false \
+            --skip-crds > "$RUNNER_TEMP/traefik.yaml"
+          if grep --quiet --fixed-strings -- '--api.dashboard=true' "$RUNNER_TEMP/traefik.yaml"; then
+            echo "Dashboard unexpectedly enabled in the default chart render." >&2
+            exit 1
+          fi
+          helm template traefik "$chart" \
+            --namespace traefik \
+            --values k8s/traefik-values.yaml \
+            --set api.dashboard=true \
+            --skip-crds | grep --quiet --fixed-strings -- '--api.dashboard=true'
+
+      - name: Validate Kubernetes resources
+        env:
+          CUSTOM_SCHEMA_LOCATION: https://raw.githubusercontent.com/datreeio/CRDs-catalog/34cef0fc2698bbb611f475515e555a2d7ca85b6c/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json
+        run: |
+          kubectl kustomize . | kubeconform -strict -summary -ignore-missing-schemas -kubernetes-version 1.33.0
+          kubectl kustomize k8s/traefik-crds | kubeconform -strict -summary -ignore-missing-schemas -kubernetes-version 1.33.0
+          kubeconform -strict -summary \
+            -kubernetes-version 1.33.0 \
+            -schema-location default \
+            -schema-location "$CUSTOM_SCHEMA_LOCATION" \
+            k8s/cluster-issuer.yaml \
+            k8s/certificate.yaml \
+            k8s/dashboard.yaml \
+            k8s/ingress-traefik.yaml
+          kubeconform -strict -summary -ignore-missing-schemas -kubernetes-version 1.33.0 "$RUNNER_TEMP/traefik.yaml"
+
+  secrets:
+    name: Scan Git history for secrets
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Check out full history
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v2.3.9
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  repository-scan:
+    name: Scan repository configuration
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Run Trivy
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # 0.35.0
+        with:
+          version: v0.72.0
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,misconfig,secret
+          severity: HIGH,CRITICAL
+          limit-severities-for-sarif: true
+          ignore-unfixed: true
+          exit-code: 1
+          format: sarif
+          output: trivy-repository.sarif
+
+      - name: Upload Trivy results
+        if: ${{ always() && hashFiles('trivy-repository.sarif') != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+        uses: github/codeql-action/upload-sarif@7188fc363630916deb702c7fdcf4e481b751f97a # v4.32.6
+        with:
+          sarif_file: trivy-repository.sarif
+          category: trivy-repository
+
+  image-scan:
+    name: Scan ${{ matrix.name }} image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: frontend
+            image: nginxinc/nginx-unprivileged:stable-alpine@sha256:dcea25a6593307a74b09e59a47f8695c4d56943750e45add532ae0bf8b24bfd6
+          - name: traefik
+            image: traefik:v3.7.8@sha256:4299bbed850421258fc5448c2e0e6ad350981d4d335a68de11b92448aedbefe5
+          - name: cert-manager-controller
+            image: quay.io/jetstack/cert-manager-controller:v1.21.0@sha256:e370f7800a53078e9d74324287a7d52b553864e55f5b4e521f911c3f6c7da203
+          - name: cert-manager-cainjector
+            image: quay.io/jetstack/cert-manager-cainjector:v1.21.0@sha256:ad1dcc5b2fccc420f9b3fbee7ce8a869450c540fd4f2f41de2d95b1ca0c4d701
+          - name: cert-manager-webhook
+            image: quay.io/jetstack/cert-manager-webhook:v1.21.0@sha256:c33cca307541e2d58861a55b1af5f390b7e19c8741e48b433693b73a7cce88b3
+    steps:
+      - name: Run Trivy
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # 0.35.0
+        with:
+          version: v0.72.0
+          scan-type: image
+          image-ref: ${{ matrix.image }}
+          severity: HIGH,CRITICAL
+          limit-severities-for-sarif: true
+          ignore-unfixed: true
+          exit-code: 1
+          format: sarif
+          output: trivy-image.sarif
+
+      - name: Upload Trivy results
+        if: ${{ always() && hashFiles('trivy-image.sarif') != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+        uses: github/codeql-action/upload-sarif@7188fc363630916deb702c7fdcf4e481b751f97a # v4.32.6
+        with:
+          sarif_file: trivy-image.sarif
+          category: trivy-${{ matrix.name }}-image
