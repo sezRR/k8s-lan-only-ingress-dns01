@@ -1,0 +1,20 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: frontends
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - kind: Rule
+      match: Host(`frontend-1.demo.example.com`)
+      services:
+        - name: frontend-1
+          port: 80
+    - kind: Rule
+      match: Host(`frontend-2.demo.example.com`)
+      services:
+        - name: frontend-2
+          port: 80
+  tls:
+    secretName: frontends-tls

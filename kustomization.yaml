@@ -5,7 +5,6 @@ resources:
   - k8s/namespace.yaml
   - k8s/apps.yaml
   - k8s/certificate.yaml
-  - k8s/ingress.yaml
 configMapGenerator:
   - name: frontend-1-html
     files:

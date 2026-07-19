@@ -1,0 +1,33 @@
+api:
+  dashboard: true
+  disableDashboardAd: true
+  insecure: false
+ingressClass:
+  # Namespace-scoped RBAC cannot read cluster-scoped IngressClass resources.
+  enabled: false
+ingressRoute:
+  dashboard:
+    enabled: false
+ports:
+  traefik:
+    expose:
+      default: false
+  web:
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true
+providers:
+  kubernetesCRD:
+    enabled: true
+    namespaces:
+      - ingress-demo
+  kubernetesIngress:
+    enabled: false
+rbac:
+  namespaced: true
+service:
+  spec:
+    type: LoadBalancer
